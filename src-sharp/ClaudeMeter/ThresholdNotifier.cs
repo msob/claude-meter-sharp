@@ -9,6 +9,20 @@ public sealed class ThresholdNotifier(IEnumerable<double> thresholds)
 {
     readonly double[] _thresholds = thresholds.Distinct().Order().ToArray();
     readonly Dictionary<string, (DateTimeOffset? ResetAt, HashSet<double> Fired)> _state = [];
+    readonly Dictionary<string, DateTimeOffset> _lastResetAt = [];
+
+    /// <summary>
+    /// True once when a window has reset: the reset time we saw before has
+    /// passed and the API now reports a later one. Requiring the old time to be
+    /// in the past ignores API jitter on a not-yet-due reset time.
+    /// </summary>
+    public bool CheckReset(string window, DateTimeOffset? resetAt, DateTimeOffset now)
+    {
+        if (resetAt is not { } r) return false;
+        var seen = _lastResetAt.TryGetValue(window, out var prev);
+        _lastResetAt[window] = r;
+        return seen && r > prev && prev <= now;
+    }
 
     /// <summary>The thresholds that fired on <em>this</em> call.</summary>
     public List<double> Check(string window, double utilization, DateTimeOffset? resetAt)

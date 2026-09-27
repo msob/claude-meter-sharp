@@ -140,7 +140,7 @@ Right-click the tray icon → **Settings…**:
 - Refresh interval (default Auto — 7 / 20 min adaptive)
 - Manual API-key override
 - Credentials file (optional — e.g. a WSL path, see above)
-- Toast notifications when crossing 75 % / 90 % / 95 %
+- Toast notifications when crossing 75 % / 90 % / 95 %, and when a quota resets
 - Auto-hide on real fullscreen apps (off by default — won't trigger on maximized windows)
 - Position offsets from system tray / taskbar, widget opacity, snooze duration
 

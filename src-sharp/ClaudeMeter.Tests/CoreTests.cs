@@ -264,6 +264,20 @@ public class NotifierAndPricingTests
     }
 
     [Fact]
+    public void ResetDetectedOnceAfterResetTimePasses()
+    {
+        var n = new ThresholdNotifier([]);
+        var before = Reset.AddHours(-1);
+        Assert.False(n.CheckReset("5h", Reset, before));                // first sighting — nothing to compare
+        Assert.False(n.CheckReset("5h", Reset.AddSeconds(3), before));  // jitter before the reset is due
+        Assert.False(n.CheckReset("5h", null, before));                 // no reset time — ignored
+        var after = Reset.AddMinutes(10);
+        Assert.True(n.CheckReset("5h", Reset.AddHours(5), after));      // old time passed, new window
+        Assert.False(n.CheckReset("5h", Reset.AddHours(5), after));     // only once
+        Assert.False(n.CheckReset("7d", Reset.AddDays(7), after));      // windows are independent
+    }
+
+    [Fact]
     public void PricingScalesAndFormats()
     {
         Assert.All(Pricing.Prices.Values, m => Assert.True(m.OutputPerMtok > m.InputPerMtok && m.InputPerMtok > 0));

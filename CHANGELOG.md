@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0] — 2026-09-27
 
+### Added
+- **"Usage has reset" toast** when a quota window resets (one toast for windows that reset together, e.g. the weekly rows). Uses the existing Notifications setting.
+- **"Updated … ago"** line in the widget footer, under the reset countdown.
+- **Automatic releases** — every push to `main` publishes a new version (`major.minor.<run>`).
+
 ### Changed
 - **Rewritten in C# / WPF (.NET 10).** Same widget, tooltip, tray icon and polling behaviour, now a ~300 KB single-file `.exe` that needs the .NET 10 Desktop Runtime (was a ~70 MB PyInstaller bundle).
 - **WSL auto-discovery removed.** Claude Meter no longer runs `wsl.exe` or any other process. If Claude Code runs only inside WSL, set Settings → **Credentials file** to `\\wsl.localhost\<distro>\home\<you>\.claude\.credentials.json`.

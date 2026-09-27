@@ -22,10 +22,10 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 
@@ -45,17 +45,12 @@ jobs:
           dotnet publish src-sharp/ClaudeMeter -c Release -r win-x64 --self-contained false
           -p:PublishSingleFile=true -p:DebugType=none -p:Version=${{ steps.version.outputs.version }} -o dist
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ClaudeMeter-${{ steps.version.outputs.version }}-win-x64
-          path: dist/ClaudeMeter.exe
-
+      # gh ships with the runner — no Node-based release action to keep current.
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: Claude Meter v${{ steps.version.outputs.version }}
-          target_commitish: ${{ github.sha }}
-          files: dist/ClaudeMeter.exe
-          generate_release_notes: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" dist/ClaudeMeter.exe \
+            --title "Claude Meter v$VERSION" --target "$GITHUB_SHA" --generate-notes

@@ -64,7 +64,7 @@ public sealed class SettingsWindow : Window
         credRow.Children.Add(credPath);
         Row("Credentials file (optional):", credRow);
 
-        var notify = new CheckBox { Content = "Show toast when crossing 75% / 90% / 95%", IsChecked = s.NotificationsEnabled, VerticalAlignment = VerticalAlignment.Center };
+        var notify = new CheckBox { Content = "Toast at 75% / 90% / 95% and when usage resets", IsChecked = s.NotificationsEnabled, VerticalAlignment = VerticalAlignment.Center };
         Row("Notifications:", notify);
 
         var fullscreen = new CheckBox { Content = "Hide when an app is fullscreen", IsChecked = s.HideWhenFullscreen, VerticalAlignment = VerticalAlignment.Center };

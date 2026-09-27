@@ -50,11 +50,17 @@ public sealed class AppController
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }  // history is best-effort
             _tray.SetState(snap.Quotas.Max(q => q.Utilization), error: false, TrayTooltip(snap));
             _widget.UpdateData(snap, _history, _products);
-            if (_settings.NotificationsEnabled)
-                foreach (var q in snap.Quotas)
-                    foreach (var t in _notifier.Check(q.Key, q.Utilization, q.ResetsAt))
+            // Always run the checks so reset tracking stays current; only toast when enabled.
+            var reset = snap.Quotas.Where(q => _notifier.CheckReset(q.Key, q.ResetsAt, DateTimeOffset.UtcNow)).ToList();
+            foreach (var q in snap.Quotas)
+                foreach (var t in _notifier.Check(q.Key, q.Utilization, q.ResetsAt))
+                    if (_settings.NotificationsEnabled)
                         _tray.ShowToast($"{q.Label} at {(int)(t * 100)}%",
                             $"You've used {q.Percent:0}% of your {q.Label.ToLowerInvariant()} quota.");
+            // One toast for all windows that reset together (the weekly rows share a reset time).
+            if (_settings.NotificationsEnabled && reset.Count > 0)
+                _tray.ShowToast(reset.Count == 1 ? $"{reset[0].Label} has reset" : "Claude usage has reset",
+                    string.Join("\n", reset.Select(q => $"{q.Label}: now {q.Percent:0}%")));
             return;
         }
 
