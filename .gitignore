@@ -1,23 +1,14 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-.venv/
-venv/
-env/
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.coverage
+# .NET
+bin/
+obj/
+*.user
+TestResults/
 
-# PyInstaller
-build/
+# Publish output
 dist/
-*.spec.bak
 
 # IDE
+.vs/
 .vscode/
 .idea/
 *.swp

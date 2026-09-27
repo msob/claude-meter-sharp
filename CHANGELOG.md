@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic OAuth token refresh via the `refreshToken` in `~/.claude/.credentials.json` — so the meter survives overnight without requiring you to manually re-run `claude`
 - **Browser cookie auth** (v0.2 roadmap) — read `sessionKey` from Chrome/Edge so browser-only and desktop-app-only users don't have to install the Claude Code CLI
 
+## [0.2.0] — 2026-09-27
+
+### Changed
+- **Rewritten in C# / WPF (.NET 10).** Same widget, tooltip, tray icon and polling behaviour, now a ~300 KB single-file `.exe` that needs the .NET 10 Desktop Runtime (was a ~70 MB PyInstaller bundle).
+- **WSL auto-discovery removed.** Claude Meter no longer runs `wsl.exe` or any other process. If Claude Code runs only inside WSL, set Settings → **Credentials file** to `\\wsl.localhost\<distro>\home\<you>\.claude\.credentials.json`.
+- **Threshold toasts are native** (tray balloon → Windows 10/11 toast); the optional `win11toast` / `win10toast` packages are gone.
+- Rate-limit back-off keys off the HTTP 429 status instead of matching the error text.
+
+### Removed
+- The drop-in logo override (`%APPDATA%\ClaudeMeter\claude_logo.svg` etc.) — the logo is built in.
+- The Windows 11 Acrylic backdrop. A layered (translucent) WPF window can't also use the DWM backdrop, so the opacity setting was kept and the backdrop dropped. The `enable_glass_backdrop` key stays in `settings.json` but does nothing.
+
+### Kept compatible
+- `%APPDATA%\ClaudeMeter\settings.json`, `history.json` and the HKCU `Run` entry use the same format and names, so an upgrade from v0.1.x keeps settings, history and autostart.
+
 ## [0.1.4] — 2026-05-20
 
 ### Fixed
@@ -56,7 +71,8 @@ Initial public release.
 - Single .exe distribution via PyInstaller — no installer, no admin
 - Auto-detects Claude Code OAuth credentials from `~/.claude/.credentials.json` (Windows + WSL)
 
-[Unreleased]: https://github.com/JackBhanded/claude-meter/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/JackBhanded/claude-meter/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/JackBhanded/claude-meter/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/JackBhanded/claude-meter/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/JackBhanded/claude-meter/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/JackBhanded/claude-meter/compare/v0.1.0...v0.1.2

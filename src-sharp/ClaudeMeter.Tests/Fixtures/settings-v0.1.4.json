@@ -1,0 +1,18 @@
+{
+  "refresh_seconds": 300,
+  "manual_api_key": null,
+  "plan": "max_5x",
+  "notify_at_thresholds": [
+    0.8,
+    0.95
+  ],
+  "notifications_enabled": true,
+  "hide_when_fullscreen": true,
+  "theme": "auto",
+  "pos_offset_right": 6,
+  "pos_offset_bottom": 6,
+  "opacity": 0.85,
+  "enable_glass_backdrop": true,
+  "snooze_minutes": 15,
+  "some_future_key": "ignored"
+}

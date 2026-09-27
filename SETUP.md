@@ -95,22 +95,15 @@ It pushes. Takes 5–15 seconds.
 
 Now go back to the github.com tab from step 2a and refresh. You should see all your files — the README rendering at the bottom with your screenshot and badges. 🎉
 
-### 2e. Cut the first release (auto-builds the .exe)
+### 2e. The first release happens by itself
 
-We set up a GitHub Action that builds `ClaudeMeter.exe` automatically when you push a version tag. Here's how to push that tag:
+A GitHub Action builds `ClaudeMeter.exe` and publishes a new release **on every push to `main`** — the push from step 2d already started it. There's nothing to type.
 
-In GitHub Desktop: **Repository → Open in Terminal** (or "Open in Command Prompt", depending on Windows version).
+Go to the github.com page for your repo and click the **Actions** tab. You'll see a workflow called "Release" running. Takes ~3–5 minutes.
 
-In the terminal that opens, type these exactly:
+When it finishes (green check), click the **Releases** link in the right sidebar of your repo's main page. You'll see "Claude Meter v0.2.1" (or similar) with `ClaudeMeter.exe` attached. Anyone can now download it.
 
-```cmd
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-Now go to the github.com page for your repo and click the **Actions** tab. You'll see a workflow called "Release" running. Takes ~3–5 minutes.
-
-When it finishes (green check), click the **Releases** link in the right sidebar of your repo's main page. You'll see "Release v0.1.0" with `ClaudeMeter.exe` attached. Anyone can now download it.
+The version is `<major>.<minor>` from `src-sharp/ClaudeMeter/ClaudeMeter.csproj` plus a counter that goes up with every run.
 
 ---
 
@@ -124,7 +117,7 @@ The repo is live. Now make it stand out. Here's a launch checklist, roughly in o
 On your repo's main page, click the ⚙️ gear next to "About" (top right). Add **topics** so people searching can find it:
 ```
 claude  claude-code  anthropic  windows  taskbar  system-tray
-usage-tracker  python  pyside6  qt  windows-10  windows-11
+usage-tracker  csharp  dotnet  wpf  windows-10  windows-11
 ```
 
 #### Pin the repo to your profile
@@ -176,7 +169,7 @@ These are slow-burn discovery sources but generate a long tail of stars.
 
 - Watch GitHub Issues. Respond within 24 hours.
 - Cut **v0.1.1** with whatever the first wave surfaces (it always does — wrong DPI scaling on some monitor, missing edge case in credentials path, etc.).
-- The same release Action triggers from `git tag v0.1.1; git push origin v0.1.1`.
+- Every push to `main` ships a new release automatically.
 
 ### Optional: ProductHunt
 
@@ -217,15 +210,10 @@ After the launch the cycle is short:
 3. Type a one-line summary, click **Commit to main**.
 4. Click **Push origin** in the top-right.
 
-Done. CI runs the tests on every push.
+Done. Every push to `main` runs the tests and, if they pass, publishes a new
+release with a fresh `.exe` (version `major.minor.<run number>`). Pushes to other
+branches and pull requests only run the tests.
 
-To ship a new version with a fresh `.exe`:
-
-1. Bump the version in `pyproject.toml` and `src/claude_usage_widget/__init__.py`.
-2. Commit + push that change.
-3. Open the terminal, run:
-   ```cmd
-   git tag v0.1.1
-   git push origin v0.1.1
-   ```
-4. Wait for the Release Action to finish — fresh `.exe` appears in Releases.
+- **Bigger version jump** (e.g. 0.2 → 0.3): change `<Version>` in
+  `src-sharp/ClaudeMeter/ClaudeMeter.csproj` and add a `CHANGELOG.md` entry.
+- **Push without releasing** (docs typo etc.): put `[skip ci]` in the commit message.

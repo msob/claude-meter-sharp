@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- WinForms only for NotifyIcon / ContextMenuStrip / Screen. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>ClaudeMeter</AssemblyName>
+    <RootNamespace>ClaudeMeter</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- WFO0003 wants WinForms' ApplicationHighDpiMode; WPF reads DPI awareness from the manifest. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+    <ApplicationIcon>ClaudeMeter.ico</ApplicationIcon>
+    <Version>0.2.0</Version>
+    <Product>Claude Meter</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WPF and WinForms share type names (Application, Color, Brush…); keep WinForms explicit. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+    <!-- WPF drops System.IO (Path vs Shapes.Path); nothing here uses Shapes. -->
+    <Using Include="System.IO" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ClaudeMeter.Tests" />
+  </ItemGroup>
+
+</Project>

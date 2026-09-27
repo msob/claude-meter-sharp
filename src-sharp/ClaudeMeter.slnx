@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ClaudeMeter.Tests/ClaudeMeter.Tests.csproj" />
+  <Project Path="ClaudeMeter/ClaudeMeter.csproj" />
+</Solution>

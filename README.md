@@ -10,7 +10,7 @@ Every quota that lives on `claude.ai/settings/usage` — Current session, Weekly
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Windows 10 & 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows)
-![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 [![Release](https://img.shields.io/github/v/release/JackBhanded/claude-meter?include_prereleases)](../../releases)
 
 <br>
@@ -48,14 +48,19 @@ surprised.
   good numbers (with a small amber dot) instead of going blank.
 - **Checks gently.** It refreshes on its own every few minutes and slows down when
   you're away, so it never wastes your allowance just by watching.
-- **One file, no install.** Download, double-click, done. Turn on "run at startup"
-  from the tray menu and forget about it.
+- **One small file, no installer.** A ~300 KB `.exe` — download, double-click, done.
+  Turn on "run at startup" from the tray menu and forget about it.
 
 ## Install (30 seconds)
 
-1. Grab **`ClaudeMeter.exe`** from the [Releases page](../../releases).
-2. Drop it in `C:\Tools\` (or anywhere). Double-click.
-3. Right-click the tray icon → **Run at startup** so it's there next reboot.
+1. Make sure the **[.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)** is installed
+   (Windows asks for it on first launch if it's missing).
+2. Grab **`ClaudeMeter.exe`** from the [Releases page](../../releases).
+3. Drop it in `C:\Tools\` (or anywhere). Double-click.
+4. Right-click the tray icon → **Run at startup** so it's there next reboot.
+
+Upgrading from v0.1.x (the Python build)? Your settings, 14-day history and
+"Run at startup" entry carry over — just replace the old `.exe`.
 
 ### Prerequisite — Claude Code CLI must be logged in
 
@@ -71,6 +76,9 @@ claude
 `claude` opens a browser-based login. After you authenticate, it writes the credentials file and the widget picks it up automatically on next refresh. You don't have to actually USE Claude Code for coding — login once and forget it.
 
 If you don't want Node.js, an installer is available at https://claude.com/claude-code that doesn't require it.
+
+> **Claude Code only inside WSL?** Claude Meter no longer shells out to `wsl.exe`. Point it at the file instead:
+> Settings → **Credentials file** → `\\wsl.localhost\<distro>\home\<you>\.claude\.credentials.json`.
 
 > **Browser-only users / desktop-app-only users**: support for reading `sessionKey` from your browser cookies is on the v0.2 roadmap so you won't need to install the CLI just for this widget. For now, the CLI is the path.
 
@@ -92,7 +100,7 @@ against the closest Windows peers:
 
 | | **Claude Meter** | [jens-duttke](https://github.com/jens-duttke/usage-monitor-for-claude) | [Zrnik](https://github.com/Zrnik/claude-usage-windows-taskbar-widget) | [sr-kai's claudeusagewin](https://github.com/sr-kai/claudeusagewin) | [CodeZeno](https://github.com/CodeZeno/Claude-Code-Usage-Monitor) |
 |---|:---:|:---:|:---:|:---:|:---:|
-| Stack | Python + PySide6 | Python (single-EXE) | C# / WPF | C# / WPF + WPF-UI | Rust + Win32 GDI |
+| Stack | C# / WPF | Python (single-EXE) | C# / WPF | C# / WPF + WPF-UI | Rust + Win32 GDI |
 | Per-model breakdown (Sonnet/Opus/Design) | ✅ | ✅ (Sonnet/Opus + extra) | ❌ (unified only) | ⚠️ (Sonnet only) | ❌ (unified only) |
 | Daily routine runs | ✅ | — | ❌ | ❌ | ❌ |
 | Overage tracking | ✅ (when API exposes) | ✅ | ❌ | ✅ | ❌ |
@@ -101,11 +109,10 @@ against the closest Windows peers:
 | Keeps last data on API errors | ✅ | — | ❌ | ⚠️ | ❌ |
 | Time-aware alerts (fire when you outpace the clock) | (roadmap) | ✅ | ❌ | ❌ | ❌ |
 | Localization | (roadmap) | ✅ (12 languages) | ❌ | ❌ | ❌ |
-| Drop-in logo override | ✅ | ❌ | ❌ | ❌ | ❌ |
-| End-user .exe size | ~70 MB | Python single-EXE | ~5 MB (needs .NET 8) | ~6 MB (needs .NET 8) | ~3 MB |
+| End-user .exe size | ~0.3 MB (needs .NET 10) | Python single-EXE | ~5 MB (needs .NET 8) | ~6 MB (needs .NET 8) | ~3 MB |
 | Multi-account | (roadmap) | — | ✅ | ❌ | ❌ |
 
-The closest tool to this one is **[jens-duttke's usage-monitor-for-claude](https://github.com/jens-duttke/usage-monitor-for-claude)** — same idea (Windows tray, Python, zero-config auth from `~/.claude/.credentials.json`, per-model bars, adaptive polling with 429 backoff). It's excellent, and it does two things Meter doesn't yet: **time-aware alerts** (it warns you when you're burning faster than the clock, not just at fixed percentages) and **12-language localization**. If either matters to you, reach for it.
+The closest tool to this one is **[jens-duttke's usage-monitor-for-claude](https://github.com/jens-duttke/usage-monitor-for-claude)** — same idea (Windows tray, zero-config auth from `~/.claude/.credentials.json`, per-model bars, adaptive polling with 429 backoff). It's excellent, and it does two things Meter doesn't yet: **time-aware alerts** (it warns you when you're burning faster than the clock, not just at fixed percentages) and **12-language localization**. If either matters to you, reach for it.
 
 A few more, depending on what you want:
 
@@ -126,26 +133,16 @@ It checks in only every few minutes (and less often when you're idle), so it's
 gentle on your allowance — watching the gauge doesn't cost you anything to speak
 of. The technical details live in [CLAUDE.md](CLAUDE.md) if you want them.
 
-## Using your own / official logo
-
-The widget loads its logo from the first matching file in:
-
-1. `%APPDATA%\ClaudeMeter\claude_logo.svg` (or `.png`)
-2. `<exe dir>\assets\claude_logo.svg`
-3. The bundled SVG in `assets/`
-4. Falls back to a programmatic Claude asterisk
-
-Drop the official Anthropic mark into any of those paths and the widget picks it up on next launch.
-
 ## Configuration
 
 Right-click the tray icon → **Settings…**:
 
 - Refresh interval (default Auto — 7 / 20 min adaptive)
 - Manual API-key override
+- Credentials file (optional — e.g. a WSL path, see above)
 - Toast notifications when crossing 75 % / 90 % / 95 %
 - Auto-hide on real fullscreen apps (off by default — won't trigger on maximized windows)
-- Position offsets from system tray / taskbar
+- Position offsets from system tray / taskbar, widget opacity, snooze duration
 
 Settings live in `%APPDATA%\ClaudeMeter\settings.json`.
 Usage history (for the sparkline) lives in `%APPDATA%\ClaudeMeter\history.json` — 14 days, ~10-minute buckets.
@@ -155,18 +152,19 @@ Usage history (for the sparkline) lives in `%APPDATA%\ClaudeMeter\history.json` 
 ```cmd
 git clone https://github.com/JackBhanded/claude-meter
 cd claude-meter
-build-exe.cmd      :: produces dist\ClaudeMeter.exe
-:: …or run from source:
-run.cmd
+dotnet test src-sharp/ClaudeMeter.slnx
+dotnet run --project src-sharp/ClaudeMeter
+:: …or build the release exe (dist\ClaudeMeter.exe):
+dotnet publish src-sharp/ClaudeMeter -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -o dist
 ```
 
-Requires Python 3.10+ on PATH. PySide6 is the only heavy dependency.
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). No NuGet packages beyond the test framework.
 
 ## Roadmap
 
 - Multi-account side-by-side (cycle through `.credentials.json` profiles)
 - Live-tile-style taskbar icon on Windows 11 (Win+W panel via MSIX)
-- Linux build (KDE/GNOME tray support is already in Qt)
+- Linux build
 - Optional Excel/CSV export of the 14-day history
 - Localization
 
