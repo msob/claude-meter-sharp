@@ -182,7 +182,7 @@ public class SettingsAndHistoryTests
         Assert.Equal("max_5x", s.Plan);
         Assert.Equal([0.8, 0.95], s.NotifyAtThresholds);
         Assert.True(s.HideWhenFullscreen);
-        Assert.Equal(180, s.PosOffsetRight);
+        Assert.Equal(6, s.PosOffsetRight);
         Assert.Equal(0.85, s.Opacity);
         Assert.Null(s.CredentialsPath);
 
