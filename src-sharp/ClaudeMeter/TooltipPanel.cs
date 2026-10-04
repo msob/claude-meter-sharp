@@ -195,7 +195,7 @@ public sealed class TooltipPanel : Window
 
     internal static string FormatReset(DateTimeOffset? resetAt, DateTimeOffset now)
     {
-        if (resetAt is not { } r) return "resets — unknown";
+        if (resetAt is not { } r) return "Resets — unknown";
         var local = r.ToLocalTime();
         return r < now
             ? $"Reset at {local.ToString("HH:mm", CultureInfo.InvariantCulture)} (passed)"
