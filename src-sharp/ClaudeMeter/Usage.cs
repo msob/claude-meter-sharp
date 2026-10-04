@@ -1,5 +1,8 @@
 using System.Globalization;
 using System.Net.Http;
+using System.Net.Security;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 
 namespace ClaudeMeter;
@@ -34,6 +37,8 @@ public sealed record UsageSnapshot
     public List<Quota> Quotas { get; set; } = [];
     public List<CountQuota> CountQuotas { get; set; } = [];
     public Overage? Overage { get; set; }
+    // Certificate problem that was bypassed because ignore_tls_errors is on.
+    public string? TlsWarning { get; set; }
     public string? CredentialSource { get; set; }
     public string? CredentialKind { get; set; }
 
@@ -50,11 +55,39 @@ public sealed record UsageSnapshot
 public static class Usage
 {
     public const string UsageUrl = "https://api.anthropic.com/api/oauth/usage";
+    internal static string Endpoint = UsageUrl;  // tests point this at a local TLS server
     const string AnthropicVersion = "2023-06-01";
     const string AnthropicBetaOAuth = "oauth-2025-04-20";
     const string UserAgent = "claude-code/1.0 (claude-usage-widget)";
 
-    static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(10) };
+    static readonly HttpRequestOptionsKey<string> TlsProblem = new("claude-meter.tls-problem");
+    static readonly HttpClient Strict = CreateClient(ignoreTls: false);
+    static readonly HttpClient Lenient = CreateClient(ignoreTls: true);
+
+    // Both clients record why Windows rejected a certificate; only Lenient then accepts it anyway.
+    static HttpClient CreateClient(bool ignoreTls) => new(new HttpClientHandler
+    {
+        ServerCertificateCustomValidationCallback = (req, cert, chain, errors) =>
+        {
+            if (errors != SslPolicyErrors.None)
+                req.Options.Set(TlsProblem, DescribeCertificateProblem(cert, chain, errors));
+            return ignoreTls || errors == SslPolicyErrors.None;
+        },
+    }) { Timeout = TimeSpan.FromSeconds(10) };
+
+    internal static string DescribeCertificateProblem(X509Certificate2? cert, X509Chain? chain, SslPolicyErrors errors)
+    {
+        var parts = new List<string> { errors.ToString() };
+        if (cert is not null)
+        {
+            parts.Add($"subject: {cert.Subject}");
+            parts.Add($"issuer: {cert.Issuer}");
+            parts.Add($"valid {cert.NotBefore:yyyy-MM-dd} – {cert.NotAfter:yyyy-MM-dd}");
+        }
+        var chainStatus = chain?.ChainStatus.Select(s => s.StatusInformation.Trim()).Where(s => s.Length > 0).Distinct().ToList();
+        if (chainStatus is { Count: > 0 }) parts.Add($"chain: {string.Join(" ", chainStatus)}");
+        return string.Join("; ", parts);
+    }
 
     // "seven_day_omelette" is Anthropic's internal codename for the Claude Design quota.
     static readonly Dictionary<string, string> KnownLabels = new()
@@ -81,7 +114,7 @@ public static class Usage
     static readonly string[] NonUtilSections = ["extra_usage", "daily_routine_runs", "plan"];
 
     /// <summary>Fetch the usage payload. Never throws — failures land in <see cref="UsageSnapshot.Error"/>.</summary>
-    public static async Task<UsageSnapshot> ProbeAsync(Credential credential, CancellationToken ct = default)
+    public static async Task<UsageSnapshot> ProbeAsync(Credential credential, bool ignoreTlsErrors = false, CancellationToken ct = default)
     {
         var snap = new UsageSnapshot { CredentialSource = credential.Source, CredentialKind = credential.Kind };
         if (credential.Kind != "oauth")
@@ -91,22 +124,35 @@ public static class Usage
             return snap;
         }
 
-        using var req = new HttpRequestMessage(HttpMethod.Get, UsageUrl);
+        using var req = new HttpRequestMessage(HttpMethod.Get, Endpoint);
         req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {credential.Token}");
         req.Headers.TryAddWithoutValidation("anthropic-version", AnthropicVersion);
         req.Headers.TryAddWithoutValidation("anthropic-beta", AnthropicBetaOAuth);
         req.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
         req.Headers.TryAddWithoutValidation("Accept", "application/json");
+        // Fresh connection per poll, so the certificate check (and its diagnostics) runs every
+        // time instead of being skipped on a pooled connection. Polls are minutes apart.
+        req.Headers.ConnectionClose = true;
 
         string body;
         try
         {
-            using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
+            using var resp = await (ignoreTlsErrors ? Lenient : Strict).SendAsync(req, ct).ConfigureAwait(false);
+            if (req.Options.TryGetValue(TlsProblem, out var ignored))
+                snap.TlsWarning = $"Certificate problem ignored (ignore_tls_errors is on): {ignored}";
             snap.StatusCode = (int)resp.StatusCode;
             // Honour Retry-After even on 4xx so the poller can back off correctly.
             if (resp.Headers.RetryAfter?.Delta is TimeSpan ra)
                 snap.RetryAfterS = (int)ra.TotalSeconds;
             body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        }
+        catch (HttpRequestException e) when (req.Options.TryGetValue(TlsProblem, out _) || e.InnerException is AuthenticationException)
+        {
+            // Certificate rejected, or the handshake itself failed (protocol/cipher mismatch, reset by a proxy…).
+            snap.Error = "TLS/SSL error: " + (req.Options.TryGetValue(TlsProblem, out var problem)
+                ? problem
+                : e.InnerException?.Message ?? e.Message);
+            return snap;
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
         {

@@ -140,6 +140,9 @@ Right-click the tray icon → **Settings…**:
 - Refresh interval (default Auto — 7 / 20 min adaptive)
 - Manual API-key override
 - Credentials file (optional — e.g. a WSL path, see above)
+- Ignore TLS/SSL certificate errors (off by default) — for networks whose firewall intercepts HTTPS.
+  This is insecure; the better fix is to install the firewall's root certificate into Windows, which
+  Claude Meter trusts automatically. Certificate problems are shown in full in the hover panel either way.
 - Toast notifications when crossing 75 % / 90 % / 95 %, and when a quota resets
 - Auto-hide on real fullscreen apps (off by default — won't trigger on maximized windows)
 - Position offsets from system tray / taskbar, widget opacity, snooze duration

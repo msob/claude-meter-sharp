@@ -48,7 +48,8 @@ public sealed class AppController
             var opus = snap.ByKey("seven_day_opus");
             try { _history = History.Append(five?.Utilization, seven?.Utilization, opus?.Utilization); }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }  // history is best-effort
-            _tray.SetState(snap.Quotas.Max(q => q.Utilization), error: false, TrayTooltip(snap));
+            _tray.SetState(snap.Quotas.Max(q => q.Utilization), error: false,
+                TrayTooltip(snap, snap.TlsWarning is null ? null : "TLS certificate check bypassed — hover the widget for details"));
             _widget.UpdateData(snap, _history, _products);
             // Always run the checks so reset tracking stays current; only toast when enabled.
             var reset = snap.Quotas.Where(q => _notifier.CheckReset(q.Key, q.ResetsAt, DateTimeOffset.UtcNow)).ToList();
@@ -67,7 +68,7 @@ public sealed class AppController
         if (_lastGood is not null)
         {
             // Keep last-good numbers (and tray colour); the error lives in the tooltip + stale dot.
-            var merged = _lastGood with { Ok = false, Error = snap.Error, StatusCode = snap.StatusCode, RetryAfterS = snap.RetryAfterS };
+            var merged = _lastGood with { Ok = false, Error = snap.Error, StatusCode = snap.StatusCode, RetryAfterS = snap.RetryAfterS, TlsWarning = null };
             _tray.SetState(_lastGood.Quotas.Max(q => q.Utilization), error: false,
                 TrayTooltip(_lastGood, $"Last refresh failed: {snap.Error}"));
             _widget.UpdateData(merged, _history, _products);

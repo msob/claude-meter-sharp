@@ -30,7 +30,7 @@ public sealed class TooltipPanel : Window
         Content = _surface = new Surface(Paint);
         SourceInitialized += (_, _) => Native.MakeNoActivateToolWindow(new WindowInteropHelper(this).Handle);
 
-        // Keep "resets in Xm" fresh while the panel sits open.
+        // Keep "Resets in Xm" fresh while the panel sits open.
         var tick = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         tick.Tick += (_, _) => _surface.InvalidateVisual();
         IsVisibleChanged += (_, _) => { if (IsVisible) { tick.Start(); _surface.InvalidateVisual(); } else tick.Stop(); };
@@ -41,9 +41,10 @@ public sealed class TooltipPanel : Window
         _snap = snap;
         _buckets = buckets;
         _products = products;
-        var h = HeaderH + (snap?.Quotas.Count > 0 ? RowH * snap.Quotas.Count : 40);
+        var h = HeaderH + (snap?.Quotas.Count > 0 ? RowH * snap.Quotas.Count : snap is null ? 40 : 0);
         if (snap?.CountQuotas.Count > 0) h += 20 + RowHCompact * snap.CountQuotas.Count;
         if (snap?.Overage is not null) h += 8 + RowHCompact;
+        if (Notice(snap) is { } notice) h += Theme.TextHeight(this, notice, NoticePt, W - 2 * Pad) + 12;
         if (products.Count > 0) h += 26 + 18 * Math.Min(5, products.Count);
         Height = Math.Max(240, h + 60);  // + sparkline + footer
         _surface.InvalidateVisual();
@@ -90,11 +91,6 @@ public sealed class TooltipPanel : Window
             Theme.Text(dc, this, "Fetching usage…", 9, Theme.TextSecondary, Pad, y + 16);
             y += 40;
         }
-        else if (!_snap.Ok && _snap.Quotas.Count == 0)
-        {
-            Theme.Text(dc, this, _snap.Error ?? "No data", 9, Theme.BrandCoralDark, Pad, y + 16);
-            y += 40;
-        }
         else
         {
             foreach (var q in _snap.Quotas)
@@ -103,7 +99,7 @@ public sealed class TooltipPanel : Window
                 Theme.Text(dc, this, q.Label, 9, Theme.TextPrimary, Pad, y + 12, FontWeights.Bold);
                 Theme.Text(dc, this, q.Percent.ToString("0.0", CultureInfo.InvariantCulture) + "% used", 9, color, Pad + w, y + 12, alignRight: true);
                 Theme.Bar(dc, Pad, y + 18, w, 8, q.Utilization, color);
-                Theme.Text(dc, this, FormatReset(q.ResetsAt, now), 7, Theme.TextTertiary, Pad, y + 40);
+                Theme.Text(dc, this, FormatReset(q.ResetsAt, now), 8, Theme.TextTertiary, Pad, y + 40);
                 y += RowH;
             }
             if (_snap.CountQuotas.Count > 0)
@@ -127,6 +123,12 @@ public sealed class TooltipPanel : Window
             }
         }
 
+        if (Notice(_snap) is { } notice)
+        {
+            Theme.Text(dc, this, notice, NoticePt, _snap!.Ok ? Theme.Orange : Theme.BrandCoralDark, Pad, y + 12, maxWidth: w);
+            y += Theme.TextHeight(this, notice, NoticePt, w) + 12;
+        }
+
         if (_products.Count > 0)
         {
             y += 10;
@@ -144,12 +146,15 @@ public sealed class TooltipPanel : Window
         if (spark.Count > 2)
         {
             double sy = h - 38, sh = 20, step = w / (spark.Count - 1);
+            // Scale to the largest value shown, so low usage still reads clearly (all-zero stays flat).
+            var max = spark.Max();
+            double Y(double v) => sy + sh - (max > 0 ? Math.Max(0, v) / max : 0) * sh;
             var line = new StreamGeometry();
             using (var g = line.Open())
             {
-                g.BeginFigure(new Point(Pad, sy + sh - Math.Clamp(spark[0], 0, 1) * sh), false, false);
+                g.BeginFigure(new Point(Pad, Y(spark[0])), false, false);
                 for (var i = 1; i < spark.Count; i++)
-                    g.LineTo(new Point(Pad + i * step, sy + sh - Math.Clamp(spark[i], 0, 1) * sh), true, true);
+                    g.LineTo(new Point(Pad + i * step, Y(spark[i])), true, true);
             }
             dc.DrawGeometry(null, new Pen(Theme.Brush(Theme.BrandCoral), 1.3) { LineJoin = PenLineJoin.Round }, line);
         }
@@ -172,6 +177,15 @@ public sealed class TooltipPanel : Window
     // Formatting helpers (shared with the widget's countdown).
     // ------------------------------------------------------------------
 
+    const double NoticePt = 8;
+
+    /// <summary>Error or TLS warning to spell out in full (wrapped) — the widget only has room for a short form.</summary>
+    internal static string? Notice(UsageSnapshot? s) =>
+        s is null ? null
+        : s.Ok ? s.TlsWarning
+        : s.Quotas.Count > 0 ? $"Last refresh failed: {s.Error}"
+        : s.Error ?? "No data";
+
     internal static string Relative(TimeSpan delta)
     {
         var s = (long)delta.TotalSeconds;
@@ -184,8 +198,8 @@ public sealed class TooltipPanel : Window
         if (resetAt is not { } r) return "resets — unknown";
         var local = r.ToLocalTime();
         return r < now
-            ? $"reset at {local.ToString("HH:mm", CultureInfo.InvariantCulture)} (passed)"
-            : $"resets in {Relative(r - now)} · {local.ToString("ddd HH:mm", CultureInfo.InvariantCulture)}";
+            ? $"Reset at {local.ToString("HH:mm", CultureInfo.InvariantCulture)} (passed)"
+            : $"Resets in {Relative(r - now)} · {local.ToString("ddd HH:mm", CultureInfo.InvariantCulture)}";
     }
 
     internal static string HumanizeAge(double seconds)

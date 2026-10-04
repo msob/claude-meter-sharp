@@ -364,14 +364,14 @@ public class FormattingTests
     [Fact]
     public void ResetAndCountdownText()
     {
-        Assert.Equal("resets — unknown", TooltipPanel.FormatReset(null, Now));
-        Assert.StartsWith("resets in 1h 30m · ", TooltipPanel.FormatReset(Now.AddMinutes(90), Now));
+        Assert.Equal("Resets — unknown", TooltipPanel.FormatReset(null, Now));
+        Assert.StartsWith("Resets in 1h 30m · ", TooltipPanel.FormatReset(Now.AddMinutes(90), Now));
         Assert.EndsWith("(passed)", TooltipPanel.FormatReset(Now.AddMinutes(-5), Now));
 
         Assert.Equal("—", UsageWidget.Countdown(null, Now));
         var snap = new UsageSnapshot { Quotas = [new("seven_day", "w", 0.1, Now.AddDays(3)), new("five_hour", "s", 0.2, Now.AddHours(2))] };
-        Assert.StartsWith("resets in 2h 0m · ", UsageWidget.Countdown(snap, Now));
-        Assert.Equal("resetting…", UsageWidget.Countdown(new UsageSnapshot { Quotas = [new("x", "x", 0, Now.AddMinutes(-1))] }, Now));
+        Assert.StartsWith("Resets in 2h 0m · ", UsageWidget.Countdown(snap, Now));
+        Assert.Equal("Resetting…", UsageWidget.Countdown(new UsageSnapshot { Quotas = [new("x", "x", 0, Now.AddMinutes(-1))] }, Now));
     }
 
     [Fact]

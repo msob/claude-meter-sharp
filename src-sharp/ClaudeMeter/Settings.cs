@@ -13,6 +13,9 @@ public sealed class Settings
     public string? ManualApiKey { get; set; }
     // Explicit credentials file — the escape hatch for Claude Code running only inside WSL.
     public string? CredentialsPath { get; set; }
+    // Accept any server certificate (e.g. a TLS-inspecting firewall). Insecure: the OAuth
+    // token then goes to whoever presents a certificate. Problems are still reported.
+    public bool IgnoreTlsErrors { get; set; }
     public string Plan { get; set; } = "unknown";  // pro | max_5x | max_20x | api_only | unknown
     public List<double> NotifyAtThresholds { get; set; } = [0.75, 0.90, 0.95];
     public bool NotificationsEnabled { get; set; } = true;
