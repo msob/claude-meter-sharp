@@ -15,7 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **"Usage has reset" toast** when a quota window resets (one toast for windows that reset together, e.g. the weekly rows). Uses the existing Notifications setting.
-- **"Updated … ago"** line in the widget footer, under the reset countdown.
+- **"Updated … ago"** line in the widget footer, under the reset countdown. The clock and refresh icons now span both footer lines.
+- **TLS/SSL diagnostics.** Certificate problems are always spelled out in the hover panel (policy errors, subject, issuer, validity, chain status), and other refresh errors are no longer cut off.
+- **"Ignore TLS/SSL certificate errors" setting** (`ignore_tls_errors`, off by default) for networks with a TLS-inspecting firewall. It's insecure — the Claude token goes to whoever answers — so prefer installing the firewall's root certificate into Windows.
 - **Automatic releases** — every push to `main` publishes a new version (`major.minor.<run>`).
 
 ### Changed

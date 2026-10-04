@@ -19,7 +19,8 @@ public sealed class Poller(
     public const int BackoffCapS = 60 * 60;
 
     readonly Func<Settings, Credential?> _discover = discover ?? (s => Credentials.Discover(s.ManualApiKey, s.CredentialsPath));
-    readonly Func<Credential, CancellationToken, Task<UsageSnapshot>> _probe = probe ?? Usage.ProbeAsync;
+    readonly Func<Credential, CancellationToken, Task<UsageSnapshot>> _probe =
+        probe ?? ((c, ct) => Usage.ProbeAsync(c, settings.IgnoreTlsErrors, ct));
     readonly SemaphoreSlim _kick = new(0, 1);
     readonly CancellationTokenSource _cts = new();
     Task? _loop;

@@ -14,15 +14,22 @@ namespace ClaudeMeter;
 ///  ✶   Session ·····················  40%   ← data zone
 ///      Weekly  ·····················  18%
 ///  ─────────────────────────────────────    ← hairline divider
-///  ⏱  resets in 1h 35m · Sat 02:50 AM   ↻   ← footer
+///  ⏱  Resets in 1h 35m · Sat 02:50 AM   ↻   ← footer
 /// </code>
 /// </summary>
 public sealed class UsageWidget : Window
 {
-    const double W = 264, H = 92, LogoArea = 34, PadX = 14, PadY = 11, DataZoneH = 40, RefreshIconSize = 13;
+    const double W = 264, H = 92, LogoArea = 34, PadX = 14, PadY = 11, DataZoneH = 40;
     const double DivY = PadY + DataZoneH + 2;
-    const double FooterCy = DivY + 10;  // "resets in" line; the "Updated … ago" line sits 15 px below
-    const double RefreshX = W - PadX - RefreshIconSize / 2 - 2;
+    // Footer: two text lines (baselines Line1Y / Line2Y) spanning ~y 58–82 = 24 px.
+    // The clock and refresh icons span both lines with a margin of IconMarginRatio × icon size
+    // above, below, right of the clock and left of the refresh icon: 24 / (1 + 2 × 0.4) ≈ 13.3.
+    const double Line1Y = DivY + 16, Line2Y = DivY + 28, FooterBlockH = 24;
+    const double IconMarginRatio = 0.4;
+    const double IconSize = FooterBlockH / (1 + 2 * IconMarginRatio), IconMargin = IconSize * IconMarginRatio;
+    const double IconCy = DivY + 17;
+    const double RefreshX = W - PadX - IconSize / 2;
+    const double TextX = PadX + IconSize + IconMargin;  // text start when the clock is shown
     const long RefreshCooldownMs = 15_000, RefreshingLabelMs = 2_000;
 
     readonly Settings _settings;
@@ -166,8 +173,8 @@ public sealed class UsageWidget : Window
     bool InCooldown => Now - _lastRefreshClick < RefreshCooldownMs;
     bool Refreshing => Now < _refreshPendingUntil;
 
-    // 11-px radius hit target, slightly larger than the icon.
-    static bool RefreshHit(Point p) => Math.Pow(p.X - RefreshX, 2) + Math.Pow(p.Y - FooterCy, 2) <= 11 * 11;
+    // Hit target slightly larger than the icon.
+    static bool RefreshHit(Point p) => Math.Pow(p.X - RefreshX, 2) + Math.Pow(p.Y - IconCy, 2) <= Math.Pow(IconSize / 2 + 3, 2);
 
     void SetRefreshHover(bool hover)
     {
@@ -229,27 +236,28 @@ public sealed class UsageWidget : Window
         var authExpired = stale && snap!.AuthFailed;
 
         if (_refreshHover && !refreshing)
-            dc.DrawEllipse(Theme.Brush(Theme.Border), null, new Point(RefreshX, FooterCy), 9, 9);
+            dc.DrawEllipse(Theme.Brush(Theme.Border), null, new Point(RefreshX, IconCy), IconSize / 2 + 2, IconSize / 2 + 2);
         var iconColor = InCooldown && !refreshing
             ? Color.FromArgb(130, Theme.TextTertiary.R, Theme.TextTertiary.G, Theme.TextTertiary.B)
             : Theme.TextSecondary;
-        Theme.DrawRefresh(dc, RefreshX, FooterCy, RefreshIconSize, iconColor, 1.2);
+        Theme.DrawRefresh(dc, RefreshX, IconCy, IconSize, iconColor, 1.7);
 
         if (stale)
             dc.DrawEllipse(Theme.Brush(authExpired ? Theme.Red : Theme.Orange), null,
-                new Point(RefreshX - RefreshIconSize - 6, FooterCy), 3, 3);
+                new Point(RefreshX - IconSize / 2 - IconMargin - 3, IconCy), 3, 3);  // just outside the margin
 
         var (text, color, clock) =
             refreshing ? ("Refreshing…", Theme.TextSecondary, false)
             : authExpired ? ("Session expired — run `claude` to refresh", Theme.Red, false)
             : stale ? ("Couldn't refresh · showing last update", Theme.TextSecondary, false)
             : (Countdown(snap, DateTimeOffset.UtcNow), Theme.TextSecondary, true);
-        if (clock) Theme.DrawClock(dc, PadX + 5, FooterCy, 10, Theme.TextTertiary, 1.1);
-        Theme.Text(dc, this, text, 8, color, PadX + (clock ? 14 : 0), FooterCy + 3);
+        if (clock) Theme.DrawClock(dc, PadX + 8 + IconSize / 2, IconCy, IconSize, Theme.TextTertiary, 1.5);
+        var textX = clock ? TextX : PadX;  // the long status texts need the full width
+        Theme.Text(dc, this, text, 8, color, textX + 15, Line1Y);
         // FetchedAt of a stale snapshot is the last *good* fetch — exactly the age worth showing.
         if (hasData)
             Theme.Text(dc, this, $"Updated {TooltipPanel.HumanizeAge((DateTimeOffset.UtcNow - snap!.FetchedAt).TotalSeconds)} ago",
-                7, Theme.TextTertiary, PadX + 14, FooterCy + 18);
+                7, Theme.TextTertiary, textX + 15, Line2Y);
     }
 
     void DrawRow(DrawingContext dc, double x, double y, double w, double h, Quota? q, string label)
@@ -266,17 +274,18 @@ public sealed class UsageWidget : Window
         Theme.Text(dc, this, $"{Math.Round(q.Percent, MidpointRounding.ToEven):0}%", 8, color, x + w, y - 2, alignRight: true);
     }
 
-    /// <summary>"resets in 4h 48m · Sat 02:50 AM" for the most imminent reset.</summary>
+    /// <summary>"Resets in 4h 48m · Sat 02:50 AM" for the most imminent reset.</summary>
     internal static string Countdown(UsageSnapshot? snap, DateTimeOffset now)
     {
         var imminent = snap?.Quotas.Where(q => q.ResetsAt is not null).MinBy(q => q.ResetsAt);
         if (imminent?.ResetsAt is not { } r) return "—";
-        if (r < now) return "resetting…";
-        return $"resets in {TooltipPanel.Relative(r - now)} · {r.ToLocalTime().ToString("ddd hh:mm tt", CultureInfo.InvariantCulture)}";
+        if (r < now) return "Resetting…";
+        return $"Resets in {TooltipPanel.Relative(r - now)} · {r.ToLocalTime().ToString("ddd hh:mm tt", CultureInfo.InvariantCulture)}";
     }
 
     internal static string ShortError(string err) =>
-        err.Contains("Rate-limited") ? "API rate-limited"
+        err.StartsWith("TLS") ? "TLS/SSL error"
+        : err.Contains("Rate-limited") ? "API rate-limited"
         : err.Contains("Auth") ? "Auth — re-login"
         : err.Contains("Network") ? "Network error"
         : err.Length <= 18 ? err : err[..18];

@@ -64,6 +64,17 @@ public sealed class SettingsWindow : Window
         credRow.Children.Add(credPath);
         Row("Credentials file (optional):", credRow);
 
+        var ignoreTls = new CheckBox
+        {
+            Content = "Ignore TLS/SSL certificate errors (insecure)",
+            IsChecked = s.IgnoreTlsErrors,
+            VerticalAlignment = VerticalAlignment.Center,
+            ToolTip = "For networks with a TLS-inspecting firewall/proxy. Your Claude token is then sent to\n"
+                    + "whichever server answers, even an impostor. Prefer installing the firewall's root\n"
+                    + "certificate into Windows (Claude Meter uses the Windows certificate store).",
+        };
+        Row("Network:", ignoreTls);
+
         var notify = new CheckBox { Content = "Toast at 75% / 90% / 95% and when usage resets", IsChecked = s.NotificationsEnabled, VerticalAlignment = VerticalAlignment.Center };
         Row("Notifications:", notify);
 
@@ -100,6 +111,7 @@ public sealed class SettingsWindow : Window
             s.Plan = PlanChoices[Math.Max(0, plan.SelectedIndex)].Key;
             s.ManualApiKey = string.IsNullOrWhiteSpace(apiKey.Password) ? null : apiKey.Password.Trim();
             s.CredentialsPath = string.IsNullOrWhiteSpace(credPath.Text) ? null : credPath.Text.Trim();
+            s.IgnoreTlsErrors = ignoreTls.IsChecked == true;
             s.NotificationsEnabled = notify.IsChecked == true;
             s.HideWhenFullscreen = fullscreen.IsChecked == true;
             s.PosOffsetRight = Parse(offRight, 0, 1000, s.PosOffsetRight);

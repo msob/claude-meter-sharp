@@ -41,13 +41,25 @@ public static class Theme
     static readonly FontFamily Segoe = new("Segoe UI");
 
     /// <summary>Draw text with its baseline at <paramref name="baseline"/> (Qt drawText semantics). Size in points.</summary>
+    /// <remarks>With <paramref name="maxWidth"/> &gt; 0 the text wraps; <paramref name="baseline"/> is the first line's.</remarks>
     public static void Text(DrawingContext dc, Visual v, string text, double pt, Color color, double x, double baseline,
-        FontWeight? weight = null, bool alignRight = false)
+        FontWeight? weight = null, bool alignRight = false, double maxWidth = 0)
+    {
+        var ft = Format(v, text, pt, color, weight, maxWidth);
+        dc.DrawText(ft, new Point(alignRight ? x - ft.WidthIncludingTrailingWhitespace : x, baseline - ft.Baseline));
+    }
+
+    /// <summary>Height of <see cref="Text"/> output, for sizing a window before it draws.</summary>
+    public static double TextHeight(Visual v, string text, double pt, double maxWidth) =>
+        Format(v, text, pt, TextPrimary, null, maxWidth).Height;
+
+    static FormattedText Format(Visual v, string text, double pt, Color color, FontWeight? weight, double maxWidth)
     {
         var ft = new FormattedText(text, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
             new Typeface(Segoe, FontStyles.Normal, weight ?? FontWeights.Normal, FontStretches.Normal),
             pt * 96.0 / 72.0, Brush(color), VisualTreeHelper.GetDpi(v).PixelsPerDip);
-        dc.DrawText(ft, new Point(alignRight ? x - ft.WidthIncludingTrailingWhitespace : x, baseline - ft.Baseline));
+        if (maxWidth > 0) ft.MaxTextWidth = maxWidth;
+        return ft;
     }
 
     /// <summary>Rounded track + fill. <paramref name="gradient"/> gives the "fleet look" left-to-right sheen.</summary>
@@ -80,12 +92,14 @@ public static class Theme
         return p;
     }
 
-    /// <summary>Clockwise ~300° circular arrow — the "refresh" glyph.</summary>
+    /// <summary>Clockwise ~280° circular arrow with a full arrow head — the "refresh" glyph.</summary>
     public static void DrawRefresh(DrawingContext dc, double cx, double cy, double size, Color color, double strokeW)
     {
         var r = size / 2;
         Point At(double deg) => new(cx + r * Math.Cos(deg * Math.PI / 180), cy - r * Math.Sin(deg * Math.PI / 180));
-        const double start = 60, end = 60 - 300;
+        // Angles in degrees, counter-clockwise from 3 o'clock; the arc sweeps clockwise from start to end.
+        const double start = 60, end = 60 - 280;
+        const double headLength = 0.45, headWidth = 0.5;  // × size
         var arc = new StreamGeometry();
         using (var g = arc.Open())
         {
@@ -95,17 +109,19 @@ public static class Theme
         arc.Freeze();
         dc.DrawGeometry(null, RoundPen(color, strokeW), arc);
 
-        // Arrow head at the end of the arc: tangent (clockwise) + inward normal.
+        // Arrow head: base centred on the arc's end, straddling the line; tip points along
+        // the direction of travel (the clockwise tangent).
         var e = At(end);
         var rad = end * Math.PI / 180;
-        double tx = Math.Sin(rad), ty = Math.Cos(rad), nx = -Math.Cos(rad), ny = Math.Sin(rad);
-        var hh = size * 0.32 * 0.5;
+        double tx = Math.Sin(rad), ty = Math.Cos(rad);    // clockwise tangent (screen coords)
+        double ux = Math.Cos(rad), uy = -Math.Sin(rad);   // radial, pointing outward
+        double len = size * headLength, half = size * headWidth / 2;
         var head = new StreamGeometry();
         using (var g = head.Open())
         {
-            g.BeginFigure(e, true, true);
-            g.LineTo(new Point(e.X + tx * hh + nx * hh, e.Y - ty * hh + ny * hh), false, false);
-            g.LineTo(new Point(e.X - tx * hh + nx * hh, e.Y + ty * hh + ny * hh), false, false);
+            g.BeginFigure(new Point(e.X + tx * len, e.Y + ty * len), true, true);  // tip
+            g.LineTo(new Point(e.X + ux * half, e.Y + uy * half), false, false);
+            g.LineTo(new Point(e.X - ux * half, e.Y - uy * half), false, false);
         }
         head.Freeze();
         dc.DrawGeometry(Brush(color), null, head);

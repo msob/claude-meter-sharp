@@ -45,6 +45,11 @@ Tray icon, tray/widget context menus and toasts use WinForms `NotifyIcon` /
   WPF also drops the implicit `System.IO` using; the csproj adds it back.
 - **Never steal focus** — widget and tooltip set `WS_EX_NOACTIVATE |
   WS_EX_TOOLWINDOW` in `SourceInitialized` (also keeps them out of Alt-Tab).
+- **TLS diagnostics** — `Usage.cs` has a strict and a lenient `HttpClient`; one
+  validation callback records why a certificate failed (on the request's
+  `Options`) and only the lenient one accepts it. Requests send
+  `Connection: close` so the callback runs on every poll, never skipped by a
+  pooled connection. `TlsTests` cover both paths against a local TLS server.
 - **Settings/history compatibility** — keep snake_case keys and the
   `%APPDATA%\ClaudeMeter\` paths; v0.1.x users upgrade in place.
 

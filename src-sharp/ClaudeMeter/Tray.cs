@@ -67,7 +67,7 @@ public sealed class Tray : IDisposable
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-            var d = size * 0.44f;  // corner diameter (radius 0.22 × size)
+            var d = size * 0.24f;  // corner diameter (radius 0.22 × size)
             using var path = new GraphicsPath();
             path.AddArc(0, 0, d, d, 180, 90);
             path.AddArc(size - d - 1, 0, d, d, 270, 90);
