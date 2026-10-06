@@ -82,7 +82,9 @@ public class CredentialsTests
         foreach (var file in src)
         {
             var text = File.ReadAllText(file);
-            Assert.DoesNotContain("Process.Start", text);
+            // Only exception: the logo click that opens the Claude desktop app (user-initiated, no credentials).
+            if (Path.GetFileName(file) != "ClaudeDesktop.cs")
+                Assert.DoesNotContain("Process.Start", text);
             Assert.DoesNotContain("wsl.exe", text);
         }
     }

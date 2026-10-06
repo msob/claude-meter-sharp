@@ -30,6 +30,7 @@ public sealed class UsageWidget : Window
     const double IconCy = DivY + 17;
     const double RefreshX = W - PadX - IconSize / 2;
     const double TextX = PadX + IconSize + IconMargin;  // text start when the clock is shown
+    const double LogoCx = PadX + LogoArea / 2 - 4, LogoCy = PadY + DataZoneH / 2, LogoSize = 24;
     const long RefreshCooldownMs = 15_000, RefreshingLabelMs = 2_000;
 
     readonly Settings _settings;
@@ -66,15 +67,29 @@ public sealed class UsageWidget : Window
         Content = _surface = new Surface(Paint);
         SourceInitialized += (_, _) => Native.MakeNoActivateToolWindow(new WindowInteropHelper(this).Handle);
 
-        MouseEnter += (_, _) => _tooltip.ShowNear(new Point(Left + W / 2, Top));
         MouseLeave += (_, _) =>
         {
             SetRefreshHover(false);
             After(120, HideTooltipUnlessHovered);
         };
         _tooltip.MouseLeave += (_, _) => After(120, HideTooltipUnlessHovered);
-        MouseMove += (_, e) => { var p = e.GetPosition(this); SetRefreshHover(RefreshHit(p) && !InCooldown); };
-        MouseLeftButtonDown += (_, e) => OnLeftClick(e.GetPosition(this));
+        MouseMove += (_, e) =>
+        {
+            var p = e.GetPosition(this);
+            SetRefreshHover(RefreshHit(p) && !InCooldown);
+            Cursor = _refreshHover || LogoHit(p) ? Cursors.Hand : null;
+        };
+        MouseLeftButtonDown += (_, e) =>
+        {
+            var p = e.GetPosition(this);
+            if (e.ClickCount == 1) OnLeftClick(p);
+            // Double-click toggles the detail panel — except on the logo / refresh button.
+            else if (e.ClickCount == 2 && !LogoHit(p) && !RefreshHit(p))
+            {
+                if (_tooltip.IsVisible) _tooltip.Hide();
+                else _tooltip.ShowBeside(this);
+            }
+        };
         MouseRightButtonUp += (_, _) => { _tooltip.Hide(); _menu.Show(WF.Cursor.Position); };
 
         _menu.Items.Add("Hide widget", null, (_, _) => ManualHide());
@@ -92,6 +107,8 @@ public sealed class UsageWidget : Window
         {
             if (e.PropertyName == nameof(SystemParameters.WorkArea)) Reposition();
         };
+        // Monitors plugged / unplugged / rearranged — re-place on the chosen one (or the primary).
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += (_, _) => Dispatcher.BeginInvoke(Reposition);
         ApplyVisualSettings();
         Reposition();
     }
@@ -107,9 +124,12 @@ public sealed class UsageWidget : Window
 
     public void Reposition()
     {
-        var wa = SystemParameters.WorkArea;
-        Left = Math.Max(wa.Left, wa.Right - W - _settings.PosOffsetRight);
-        Top = Math.Max(wa.Top, wa.Bottom - H - _settings.PosOffsetBottom);
+        var screen = Monitors.Pick(_settings.Monitor);
+        var wa = screen.WorkingArea;
+        var scale = Monitors.Scale(screen);
+        Monitors.Move(this,
+            Math.Max(wa.Left, wa.Right - (W + _settings.PosOffsetRight) * scale),
+            Math.Max(wa.Top, wa.Bottom - (H + _settings.PosOffsetBottom) * scale));
     }
 
     public void ApplyVisualSettings() => Opacity = _tooltip.Opacity = Math.Clamp(_settings.Opacity, 0.30, 1.0);
@@ -184,8 +204,16 @@ public sealed class UsageWidget : Window
         _surface.InvalidateVisual();
     }
 
+    static bool LogoHit(Point p) => Math.Pow(p.X - LogoCx, 2) + Math.Pow(p.Y - LogoCy, 2) <= Math.Pow(LogoSize / 2 + 3, 2);
+
     void OnLeftClick(Point p)
     {
+        if (LogoHit(p))
+        {
+            _tooltip.Hide();
+            ClaudeDesktop.Open();
+            return;
+        }
         if (!RefreshHit(p) || InCooldown) return;
         _lastRefreshClick = Now;
         _refreshPendingUntil = Now + RefreshingLabelMs;
@@ -203,7 +231,7 @@ public sealed class UsageWidget : Window
     {
         var borderPen = new Pen(Theme.Brush(Theme.Border), 1);
         dc.DrawRoundedRectangle(Theme.Brush(Theme.SurfaceBg), borderPen, new Rect(0.5, 0.5, W - 1, H - 1), 12, 12);
-        Theme.DrawLogo(dc, PadX + LogoArea / 2 - 4, PadY + DataZoneH / 2, 24);
+        Theme.DrawLogo(dc, LogoCx, LogoCy, LogoSize);
 
         const double barX = PadX + LogoArea, barW = W - barX - PadX, barH = 6;
         const double topY = PadY + 10, botY = topY + barH + 6 + 10;

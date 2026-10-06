@@ -22,6 +22,8 @@ public sealed class Settings
     // Only true fullscreen (no title bar) — never maximized windows.
     public bool HideWhenFullscreen { get; set; }
     public string Theme { get; set; } = "auto";
+    // Windows display number (\\.\DISPLAY2 → 2); 0 or a disconnected display = primary monitor.
+    public int Monitor { get; set; }
     public int PosOffsetRight { get; set; } = 220;
     public int PosOffsetBottom { get; set; } = 6;
     public double Opacity { get; set; } = 0.92;

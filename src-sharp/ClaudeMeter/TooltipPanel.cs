@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using WF = System.Windows.Forms;
 
 namespace ClaudeMeter;
 
@@ -51,22 +52,26 @@ public sealed class TooltipPanel : Window
     }
 
     /// <summary>
-    /// Place the panel without overlapping the pinned widget: above the anchor,
-    /// else left of the widget, else right of it — then clamp to the work area.
+    /// Place the panel without overlapping the pinned widget: above it, else left of it,
+    /// else right of it — then clamp to the widget monitor's work area (physical pixels).
     /// </summary>
-    public void ShowNear(Point anchor)
+    public void ShowBeside(Window widget)
     {
-        const double widgetHalfW = 120, gap = 12;
-        var wa = SystemParameters.WorkArea;
-        double h = Height, x = anchor.X - W / 2, y = anchor.Y - h - 10;
-        if (y < wa.Top + 4)
+        var screen = WF.Screen.FromHandle(new WindowInteropHelper(widget).Handle);
+        var wa = screen.WorkingArea;
+        var s = Monitors.Scale(screen);
+        var r = Monitors.WindowRect(widget);
+        double w = W * s, h = Height * s, margin = 4 * s;
+        double x = (r.Left + r.Right) / 2.0 - w / 2, y = r.Top - h - 10 * s;
+        if (y < wa.Top + margin)
         {
-            x = anchor.X - widgetHalfW - W - gap;
-            y = anchor.Y - h + 30;
-            if (x < wa.Left + 4) x = anchor.X + widgetHalfW + gap;
+            x = r.Left - w;
+            y = r.Top - h + 30 * s;
+            if (x < wa.Left + margin) x = r.Right;
         }
-        Left = Math.Max(wa.Left + 4, Math.Min(x, wa.Right - W - 4));
-        Top = Math.Max(wa.Top + 4, Math.Min(y, wa.Bottom - h - 4));
+        Monitors.Move(this,
+            Math.Max(wa.Left + margin, Math.Min(x, wa.Right - w - margin)),
+            Math.Max(wa.Top + margin, Math.Min(y, wa.Bottom - h - margin)));
         Show();
     }
 

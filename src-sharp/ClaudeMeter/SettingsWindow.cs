@@ -81,6 +81,17 @@ public sealed class SettingsWindow : Window
         var fullscreen = new CheckBox { Content = "Hide when an app is fullscreen", IsChecked = s.HideWhenFullscreen, VerticalAlignment = VerticalAlignment.Center };
         Row("Auto-hide:", fullscreen);
 
+        // Item 0 = primary; then every connected display, plus the saved one if it's unplugged right now.
+        List<(int Number, string Label)> monitorChoices = [(0, "Primary monitor")];
+        foreach (var screen in Monitors.All)
+            monitorChoices.Add((Monitors.Number(screen),
+                $"Display {Monitors.Number(screen)} · {screen.Bounds.Width}×{screen.Bounds.Height}{(screen.Primary ? " (primary)" : "")}"));
+        if (s.Monitor > 0 && monitorChoices.All(m => m.Number != s.Monitor))
+            monitorChoices.Add((s.Monitor, $"Display {s.Monitor} (not connected — using primary)"));
+        var monitor = new ComboBox { ItemsSource = monitorChoices.Select(m => m.Label).ToList() };
+        monitor.SelectedIndex = Math.Max(0, monitorChoices.FindIndex(m => m.Number == s.Monitor));
+        Row("Show on monitor:", monitor);
+
         var offRight = Num(s.PosOffsetRight);
         Row("Offset from system tray (px):", offRight);
         var offBottom = Num(s.PosOffsetBottom);
@@ -114,6 +125,7 @@ public sealed class SettingsWindow : Window
             s.IgnoreTlsErrors = ignoreTls.IsChecked == true;
             s.NotificationsEnabled = notify.IsChecked == true;
             s.HideWhenFullscreen = fullscreen.IsChecked == true;
+            s.Monitor = monitorChoices[Math.Max(0, monitor.SelectedIndex)].Number;
             s.PosOffsetRight = Parse(offRight, 0, 1000, s.PosOffsetRight);
             s.PosOffsetBottom = Parse(offBottom, 0, 200, s.PosOffsetBottom);
             s.Opacity = Parse(opacity, 30, 100, (int)Math.Round(s.Opacity * 100)) / 100.0;
